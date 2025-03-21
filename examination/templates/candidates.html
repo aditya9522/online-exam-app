@@ -1,0 +1,267 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}
+Candidates - Examination System
+{% endblock title %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="text-dark fw-bold"><i class="fas fa-users me-2"></i>Candidates</h3>
+        <button class="btn btn-outline-success shadow-sm" data-bs-toggle="modal" data-bs-target="#addCandidateModal">
+            <i class="fas fa-user-plus me-2"></i>Join New
+        </button>
+    </div>
+
+    {% if candidates %}
+    <div class="mb-4">
+        <label for="categoryFilter" class="form-label fw-semibold text-muted">Filter by Category:</label>
+        <select id="categoryFilter" class="form-select w-25 shadow-sm" onchange="filterCandidate()">
+            <option value="">All Categories</option>
+            {% for category in categories %}
+            <option value="{{ category.id }}">{{ category.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="d-flex justify-content-between align-items-baseline mb-3">
+        <h5 class="text-dark fw-semibold">Registered Candidates</h5>
+    </div>
+    <div class="rounded-3 shadow bg-white">
+        <table class="table rounded-3 table-hover mb-0">
+            <thead class="bg-primary text-white">
+                <tr>
+                    <th class="py-2 px-4 bg-primary-subtle text-primary">ID</th>
+                    <th class="py-2 px-4 bg-primary-subtle text-primary">Name</th>
+                    <th class="py-2 px-4 bg-primary-subtle text-primary">Email</th>
+                    <th class="py-2 px-4 bg-primary-subtle text-primary">Phone</th>
+                    {% comment %} <th class="py-2 px-4 bg-primary-subtle text-primary">Gender</th> {% endcomment %}
+                    <th class="py-2 px-4 bg-primary-subtle text-primary">Interest</th>
+                    <th class="py-2 px-4 bg-primary-subtle text-primary">Experience</th>
+                    <th class="py-2 px-4 bg-primary-subtle text-primary">Previous Status</th>
+                    <th class="py-2 px-4 bg-primary-subtle text-primary">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in candidates %}
+                <tr class="user-row align-middle" data-category="{{ user.category.id|default:'' }}">
+                    <td class="py-3 px-4">{{ user.id }}</td>
+                    <td class="py-3 px-4">{{ user.name }}</td>
+                    <td class="py-3 px-4">{{ user.email|truncatechars:30 }}</td>
+                    <td class="py-3 px-4">{{ user.phone }}</td>
+                    {% comment %} <td class="py-3 px-4">{{ user.gender }}</td> {% endcomment %}
+                    <td class="py-3 px-4">{{ user.category.name|default:'N/A' }}</td>
+                    <td class="py-3 px-4">{{ user.profession_type }}</td>
+                    <td class="py-3 px-4">
+                        {% if user.previous_status %}
+                        <span class="badge bg-danger text-white px-2 py-1">Yes</span>
+                        {% else %}
+                        <span class="badge bg-success text-white px-2 py-1">No</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="btn-group dropstart">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                •••
+                            </button>
+                            <ul class="dropdown-menu shadow-sm">
+                                <li><h6 class="dropdown-header text-muted">Exam Actions</h6></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#examModal" 
+                                       onclick="openExamModal('{{ user.id }}', '{{ user.name }}', '{{ user.category.name|default:'N/A' }}', '{{ user.category.id|default:'' }}')">
+                                        <i class="fas fa-share-alt me-2"></i>Exam Link
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="{% url 'reject-student' user.id %}">
+                                        <i class="fas fa-times me-2"></i>Reject
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-warning text-center shadow-sm py-5" role="alert">
+        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+        <h5>No candidates available.</h5>
+        <p>Click <a href="#" class="alert-link text-primary" data-bs-toggle="modal" data-bs-target="#addCandidateModal">here</a> to add one.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Exam Modal -->
+<div class="modal fade" id="examModal" tabindex="-1" aria-labelledby="examModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title" id="examModalLabel"><i class="fas fa-file-alt me-2"></i>Prepare Exam</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p>You are preparing an exam for: <strong class="text-primary" id="candidate-name"></strong></p>
+                <form method="POST" action="" id="examForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="candidateCat" class="form-label fw-semibold">Candidate Category</label>
+                        <input type="text" class="form-control" id="candidateCat" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label for="questionSet" class="form-label fw-semibold">Assign Set</label>
+                        <select class="form-select" name="question_set" id="questionSet" required>
+                            <option value="" selected>Select question set...</option>
+                            {% for set in sets %}
+                            <option class="set-option" data-category="{{ set.category.id }}" value="{{ set.id }}">{{ set.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-secondary me-3" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Share</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Candidate Modal -->
+<div class="modal fade modal-xl" id="addCandidateModal" tabindex="-1" aria-labelledby="addCandidateLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title" id="addCandidateLabel"><i class="fas fa-user-plus me-2"></i>New Candidate</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form method="POST" action="{% url 'add-student' %}">
+                    {% csrf_token %}
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Candidate Name</label>
+                            <input type="text" name="name" class="form-control" placeholder="Enter name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Email Address</label>
+                            <input type="email" name="email" class="form-control" placeholder="Enter valid email" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Phone</label>
+                            <input type="tel" name="phone" class="form-control" placeholder="Enter contact number" pattern="[0-9]{10}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Gender</label>
+                            <select name="gender" class="form-select" required>
+                                <option value="">Select gender...</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Others">Others</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Interest</label>
+                            <select name="category" class="form-select">
+                                <option value="">Select interest...</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Profession Type</label>
+                            <select name="profession_type" class="form-select" required>
+                                <option value="">Select profession...</option>
+                                <option value="Student">Student</option>
+                                <option value="Fresher">Fresher</option>
+                                <option value="Experienced">Experienced</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input type="checkbox" id="previous_status" name="previous_status" class="form-check-input">
+                                <label for="previous_status" class="form-check-label">Previously participated in the exam?</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-3 mt-4">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background: linear-gradient(to bottom, #f4f7fa, #e9ecef);
+    }
+    .table-responsive {
+        background: white;
+        border-radius: 10px;
+    }
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    .table tbody tr:hover {
+        background: #f1f3f5;
+        transition: background 0.2s ease;
+    }
+    .btn-outline-secondary, .btn-outline-primary {
+        transition: all 0.3s ease;
+    }
+    .btn-outline-secondary:hover {
+        background: #6c757d;
+        color: white;
+    }
+    .btn-outline-primary:hover {
+        background: #007bff;
+        color: white;
+    }
+    .modal-header.bg-primary {
+        background: linear-gradient(135deg, #007bff, #00d4ff);
+    }
+    .form-select, .form-control {
+        border-radius: 8px;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .alert {
+        border-radius: 10px;
+    }
+    .dropdown-menu {
+        border-radius: 8px;
+    }
+    .badge {
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+</style>
+
+<script>
+    function filterCandidate() {
+        let category = document.getElementById("categoryFilter").value;
+        let rows = document.querySelectorAll(".user-row");
+        rows.forEach(row => {
+            row.style.display = (category === "" || row.dataset.category === category) ? "" : "none";
+        });
+    }
+
+    function openExamModal(userId, userName, cat, categoryId) {
+        document.getElementById("candidate-name").textContent = userName;
+        document.getElementById("candidateCat").value = cat;
+        let examForm = document.getElementById("examForm");
+        examForm.action = `{% url 'send-exam-link' 0 %}`.replace("0", userId);
+        
+        let setRows = document.querySelectorAll(".set-option");
+        setRows.forEach(option => {
+            option.style.display = (option.dataset.category === categoryId) ? "" : "none";
+        });
+    }
+</script>
+{% endblock body %}

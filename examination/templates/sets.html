@@ -1,0 +1,263 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}
+Question Sets - Exam Management System
+{% endblock title %}
+
+{% block body %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="text-dark fw-bold"><i class="fas fa-archive me-2"></i>Question Sets</h3>
+        <button class="btn btn-outline-success shadow-sm" data-bs-toggle="modal" data-bs-target="#addSetModal">
+            <i class="fas fa-plus me-2"></i>New Set
+        </button>
+    </div>
+
+    <!-- Filter and Table -->
+    {% if sets %}
+    <div class="mb-4">
+        <label for="categoryFilter" class="form-label fw-semibold text-muted">Filter by Category:</label>
+        <select id="categoryFilter" class="form-select w-25 shadow-sm" onchange="filterSets()">
+            <option value="">All Categories</option>
+            {% for category in categories %}
+            <option value="{{ category.id }}">{{ category.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="table-responsive shadow rounded-3 overflow-hidden bg-white">
+        <table class="table table-hover mb-0">
+            <thead class="bg-primary text-white">
+                <tr>
+                    <th class="py-3 px-4 bg-primary-subtle text-primary">SNo.</th>
+                    <th class="py-3 px-4 bg-primary-subtle text-primary">Set Name</th>
+                    <th class="py-3 px-4 bg-primary-subtle text-primary">Category</th>
+                    <th class="py-3 px-4 bg-primary-subtle text-primary">Level</th>
+                    <th class="py-3 px-4 bg-primary-subtle text-primary">Actions</th>
+                    <th class="py-3 px-4 bg-primary-subtle text-primary">Questions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for set in sets %}
+                <tr class="set-row align-middle" data-category="{{ set.category.id }}">
+                    <td class="py-3 px-4">{{ forloop.counter }}</td>
+                    <td class="py-3 px-4">{{ set.name }}</td>
+                    <td class="py-3 px-4">{{ set.category.name }}</td>
+                    <td class="py-3 px-4 text-capitalize">{{ set.level }}</td>
+                    <td class="py-3 px-4">
+                        <button class="btn btn-outline-info btn-sm me-2 edit-btn" 
+                                data-id="{{ set.id }}" 
+                                data-name="{{ set.name }}" 
+                                data-category="{{ set.category.id }}" 
+                                data-level="{{ set.level }}"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#editSetModal">
+                            <i class="fas fa-edit me-1"></i>Edit
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm delete-btn" 
+                                data-id="{{ set.id }}" 
+                                data-name="{{ set.name }}"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#deleteSetModal">
+                            <i class="fas fa-trash me-1"></i>Delete
+                        </button>
+                    </td>
+                    <td class="py-3 px-4">
+                        <a class="btn btn-outline-warning btn-sm" href="{% url 'questions' %}">
+                            <i class="fas fa-eye me-1"></i>View
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-warning text-center shadow-sm py-5" role="alert">
+        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+        <p class="mb-0">No question sets available. Click 
+            <a href="#" class="alert-link text-primary" data-bs-toggle="modal" data-bs-target="#addSetModal">here</a> 
+            to add one.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add Set Modal -->
+<div class="modal fade" id="addSetModal" tabindex="-1" aria-labelledby="addSetLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title" id="addSetLabel"><i class="fas fa-plus me-2"></i>Add New Question Set</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form method="POST" action="">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Set Name</label>
+                        <input type="text" name="name" class="form-control" placeholder="Enter set name..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Category</label>
+                        <select name="category" class="form-select" required>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Level</label>
+                        <select name="level" class="form-select">
+                            <option value="Easy">Easy</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Hard">Hard</option>
+                            <option value="Hybrid">Hybrid</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Save</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Set Modal -->
+<div class="modal fade" id="editSetModal" tabindex="-1" aria-labelledby="editSetLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title" id="editSetLabel"><i class="fas fa-edit me-2"></i>Edit Question Set</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form method="POST" action="{% url 'edit-set' %}" id="editSetForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="id" id="edit-set-id">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Set Name</label>
+                        <input type="text" name="name" id="edit-set-name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Category</label>
+                        <select name="category" id="edit-set-category" class="form-select" required>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Level</label>
+                        <select name="level" id="edit-set-level" class="form-select">
+                            <option value="Easy">Easy</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Hard">Hard</option>
+                            <option value="Hybrid">Hybrid</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Update</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Set Modal -->
+<div class="modal fade" id="deleteSetModal" tabindex="-1" aria-labelledby="deleteSetLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-danger text-white border-0">
+                <h5 class="modal-title" id="deleteSetLabel"><i class="fas fa-trash me-2"></i>Delete Question Set</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p>Are you sure you want to delete "<strong id="delete-set-name"></strong>"? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer border-0">
+                <form method="POST" action="{% url 'delete-set' %}" id="deleteSetForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="id" id="delete-set-id">
+                    <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background: linear-gradient(to bottom, #f4f7fa, #e9ecef);
+    }
+    .table-responsive {
+        background: white;
+        border-radius: 10px;
+    }
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    .table tbody tr:hover {
+        background: #f1f3f5;
+        transition: background 0.2s ease;
+    }
+    .btn-outline-info, .btn-outline-danger, .btn-outline-warning {
+        transition: all 0.3s ease;
+    }
+    .btn-outline-info:hover {
+        background: #17a2b8;
+        color: white;
+    }
+    .btn-outline-danger:hover {
+        background: #dc3545;
+        color: white;
+    }
+    .btn-outline-warning:hover {
+        background: #ffc107;
+        color: #212529;
+    }
+    .modal-header.bg-primary {
+        background: linear-gradient(135deg, #007bff, #00d4ff);
+    }
+    .modal-header.bg-danger {
+        background: linear-gradient(135deg, #dc3545, #ff6b6b);
+    }
+    .form-select, .form-control {
+        border-radius: 8px;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .alert {
+        border-radius: 10px;
+    }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Edit Modal Data Population
+        document.querySelectorAll(".edit-btn").forEach(button => {
+            button.addEventListener("click", function () {
+                document.getElementById("edit-set-id").value = this.dataset.id;
+                document.getElementById("edit-set-name").value = this.dataset.name;
+                document.getElementById("edit-set-category").value = this.dataset.category;
+                document.getElementById("edit-set-level").value = this.dataset.level.charAt(0).toUpperCase() + this.dataset.level.slice(1);
+            });
+        });
+
+        // Delete Modal Data Population
+        document.querySelectorAll(".delete-btn").forEach(button => {
+            button.addEventListener("click", function () {
+                document.getElementById("delete-set-id").value = this.dataset.id;
+                document.getElementById("delete-set-name").textContent = this.dataset.name;
+            });
+        });
+    });
+
+    // Filter Sets by Category
+    function filterSets() {
+        let category = document.getElementById("categoryFilter").value;
+        let rows = document.querySelectorAll(".set-row");
+        rows.forEach(row => {
+            row.style.display = (category === "" || row.dataset.category === category) ? "" : "none";
+        });
+    }
+</script>
+{% endblock body %}

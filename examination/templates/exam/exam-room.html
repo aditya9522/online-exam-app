@@ -1,0 +1,290 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Online Examination Room - Professional Assessment Platform">
+    <title>Exam Room | {{candidate.name}}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        .question {
+            display: none;
+        }
+        .question.active {
+            display: block;
+        }
+        .timer {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #dc3545;
+        }
+        .progress-bar {
+            transition: width 1s linear;
+        }
+        .sidebar {
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+        .question-nav-btn {
+            width: 40px;
+            height: 40px;
+            margin: 5px;
+            font-size: 0.9rem;
+            color: black;
+        }
+        .answered {
+            background-color: #28a745 !important;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Sidebar for Question Navigation -->
+            <div class="col-md-3 col-lg-2 sidebar p-3">
+                <h6 class="text-muted mb-3">Question Navigator</h6>
+                <div id="question-nav" class="d-flex flex-wrap">
+                    {% for question in questions %}
+                    <button type="button" 
+                            class="btn btn-outline-primary question-nav-btn" 
+                            data-question="{{ forloop.counter0 }}"
+                            aria-label="Go to Question {{ forloop.counter }}">{{ forloop.counter }}</button>
+                    {% endfor %}
+                </div>
+                <hr>
+                <div class="text-muted small">
+                    <i class="fas fa-circle text-primary me-2"></i> Unanswered<br>
+                    <i class="fas fa-circle text-success me-2"></i> Answered
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10 p-5">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-gradient-primary bg-primary text-danger d-flex justify-content-between align-items-center">
+                        <h2 class="mb-0">
+                            <i class="fas fa-book me-2"></i>Examination Room
+                        </h2>
+                        <div class="d-flex align-items-center gap-2 bg-dark rounded-4 px-2">
+                            <i class="fas fa-clock fs-4"></i><div class="timer mx-0" id="timer" aria-live="polite">30:00</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info d-flex align-items-center" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <div>Answer all questions carefully. Time remaining is shown above.</div>
+                        </div>
+
+                        <div class="progress mb-4" role="progressbar" aria-label="Exam Progress" aria-valuemin="0" aria-valuemax="100">
+                            <div class="progress-bar bg-success" id="progress-bar" style="width: 0%" aria-valuenow="0"></div>
+                        </div>
+
+                        <form id="exam-form" method="post" action="{% url "exam-submit" id=candidate.id %}">
+                            {% csrf_token %}
+                            <div class="p-3">
+                                {% for question in questions %}
+                                <div class="question mb-4 p-4 bg-white rounded shadow-sm" 
+                                     id="question_{{ forloop.counter }}"
+                                     aria-labelledby="question_label_{{ forloop.counter }}">
+                                    <h5 class="fw-bold text-primary mb-3" id="question_label_{{ forloop.counter }}">
+                                        Q{{ forloop.counter }}. {{ question.question }}
+                                    </h5>
+                                    <fieldset class="options-group" aria-describedby="question_{{ question.id }}_help">
+                                        <legend class="visually-hidden">Options for Question {{ forloop.counter }}</legend>
+                                        <div class="form-check mb-2">
+                                            <input type="radio" 
+                                                   name="question_{{ question.id }}" 
+                                                   value="1" 
+                                                   class="form-check-input" 
+                                                   id="option1_{{ question.id }}"
+                                                   {% if question.is_answered == 1 %}checked{% endif %}>
+                                            <label class="form-check-label" for="option1_{{ question.id }}">{{ question.option1 }}</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input type="radio" 
+                                                   name="question_{{ question.id }}" 
+                                                   value="2" 
+                                                   class="form-check-input" 
+                                                   id="option2_{{ question.id }}"
+                                                   {% if question.is_answered == 2 %}checked{% endif %}>
+                                            <label class="form-check-label" for="option2_{{ question.id }}">{{ question.option2 }}</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input type="radio" 
+                                                   name="question_{{ question.id }}" 
+                                                   value="3" 
+                                                   class="form-check-input" 
+                                                   id="option3_{{ question.id }}"
+                                                   {% if question.is_answered == 3 %}checked{% endif %}>
+                                            <label class="form-check-label" for="option3_{{ question.id }}">{{ question.option3 }}</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input type="radio" 
+                                                   name="question_{{ question.id }}" 
+                                                   value="4" 
+                                                   class="form-check-input" 
+                                                   id="option4_{{ question.id }}"
+                                                   {% if question.is_answered == 4 %}checked{% endif %}>
+                                            <label class="form-check-label" for="option4_{{ question.id }}">{{ question.option4 }}</label>
+                                        </div>
+                                    </fieldset>
+                                </div>
+                                {% empty %}
+                                <div class="alert alert-warning" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    No questions available. Please contact the administrator.
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-secondary" id="prev-btn" 
+                                            aria-label="Previous Question" disabled>
+                                        <i class="fas fa-arrow-left me-2"></i>Previous
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" id="next-btn" 
+                                            aria-label="Next Question">
+                                        Next<i class="fas fa-arrow-right ms-2"></i>
+                                    </button>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn btn-outline-warning mx-2" id="clear-btn" 
+                                            aria-label="Clear Selection">
+                                        <i class="fas fa-eraser me-2"></i>Clear
+                                    </button>
+                                    <button type="submit" class="btn btn-primary px-2" id="submit-btn" 
+                                            aria-label="Submit Examination">
+                                        <i class="fas fa-paper-plane me-2"></i>Submit Exam
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="card-footer text-muted small">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Exam will auto-submit when time expires or window is closed/refreshed.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const questions = document.querySelectorAll('.question');
+            const totalQuestions = questions.length;
+            let currentQuestion = 0;
+            const timerElement = document.getElementById('timer');
+            const progressBar = document.getElementById('progress-bar');
+            const navButtons = document.querySelectorAll('.question-nav-btn');
+            let timeLeft = 30 * 60; // 30 minutes in seconds
+
+            // Show question and update UI
+            function showQuestion(index) {
+                if (totalQuestions === 0) return;
+                questions.forEach((q, i) => q.classList.toggle('active', i === index));
+                document.getElementById('prev-btn').disabled = index === 0;
+                document.getElementById('next-btn').disabled = index === totalQuestions - 1;
+                navButtons.forEach(btn => btn.classList.toggle('btn-primary', btn.dataset.question == index));
+                updateProgress(index);
+            }
+
+            // Update progress bar
+            function updateProgress(index) {
+                const progress = ((index + 1) / totalQuestions) * 100;
+                progressBar.style.width = `${progress}%`;
+                progressBar.setAttribute('aria-valuenow', progress);
+            }
+
+            // Update navigation button status
+            function updateNavStatus() {
+                questions.forEach((question, index) => {
+                    const inputs = question.querySelectorAll('input[type="radio"]');
+                    const isAnswered = Array.from(inputs).some(input => input.checked);
+                    navButtons[index].classList.toggle('answered', isAnswered);
+                    navButtons[index].classList.toggle('btn-outline-primary', !isAnswered);
+                });
+            }
+
+            // Navigation
+            document.getElementById('next-btn').addEventListener('click', () => {
+                if (currentQuestion < totalQuestions - 1) {
+                    currentQuestion++;
+                    showQuestion(currentQuestion);
+                }
+            });
+
+            document.getElementById('prev-btn').addEventListener('click', () => {
+                if (currentQuestion > 0) {
+                    currentQuestion--;
+                    showQuestion(currentQuestion);
+                }
+            });
+
+            navButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    currentQuestion = parseInt(btn.dataset.question);
+                    showQuestion(currentQuestion);
+                });
+            });
+
+            // Clear selection
+            document.getElementById('clear-btn').addEventListener('click', () => {
+                if (totalQuestions === 0) return;
+                const currentQuestionElement = questions[currentQuestion];
+                const inputs = currentQuestionElement.querySelectorAll('input[type="radio"]');
+                inputs.forEach(input => input.checked = false);
+                updateNavStatus();
+            });
+
+            // Timer
+            function updateTimer() {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (timeLeft <= 300 && timeLeft > 0) {
+                    timerElement.classList.add('text-warning');
+                    timerElement.classList.remove('text-danger');
+                }
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    timerElement.textContent = "00:00";
+                    alert("Time's up! Your exam is being submitted.");
+                    document.getElementById('exam-form').submit();
+                }
+                timeLeft--;
+            }
+
+            // Form submission confirmation
+            document.getElementById('exam-form').addEventListener('submit', (e) => {
+                if (timeLeft > 0 && !confirm('Are you sure you want to submit your exam? This action cannot be undone.')) {
+                    e.preventDefault();
+                }
+            });
+
+            // Track answers
+            questions.forEach(question => {
+                question.querySelectorAll('input[type="radio"]').forEach(input => {
+                    input.addEventListener('change', updateNavStatus);
+                });
+            });
+
+            // Initialize
+            if (totalQuestions > 0) {
+                showQuestion(currentQuestion);
+                updateNavStatus();
+                const timerInterval = setInterval(updateTimer, 1000);
+            } else {
+                document.getElementById('submit-btn').disabled = true;
+                timerElement.textContent = "N/A";
+            }
+        });
+    </script>
+</body>
+</html>

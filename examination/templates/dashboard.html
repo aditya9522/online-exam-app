@@ -1,0 +1,198 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}
+Dashboard - Examination System
+{% endblock title %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 text-dark fw-bold"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h1>
+        <button class="btn btn-outline-danger shadow-sm" onclick="downloadReport()">
+            <i class="fas fa-download me-2"></i>Download Report
+        </button>
+    </div>
+
+    <div class="row mb-4 g-4">
+        <div class="col-md-3">
+            <div class="card rounded-4 text-center shadow border-0" style="border-left: 4px solid #007bff;">
+                <div class="card-body py-4">
+                    <div class="d-flex align-items-center justify-content-center mb-3">
+                        <i class="fas fa-folder-open fa-2x text-primary me-3"></i>
+                        <h5 class="card-title text-muted mb-0">Total Categories</h5>
+                    </div>
+                    <p class="card-text display-4 fw-bold text-dark">{{ total_categories }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card rounded-4 text-center shadow border-0" style="border-left: 4px solid #28a745;">
+                <div class="card-body py-4">
+                    <div class="d-flex align-items-center justify-content-center mb-3">
+                        <i class="fas fa-archive fa-2x text-success me-3"></i>
+                        <h5 class="card-title text-muted mb-0">Total Sets</h5>
+                    </div>
+                    <p class="card-text display-4 fw-bold text-dark">{{ total_sets }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card rounded-4 text-center shadow border-0" style="border-left: 4px solid #17a2b8;">
+                <div class="card-body py-4">
+                    <div class="d-flex align-items-center justify-content-center mb-3">
+                        <i class="fas fa-question-circle fa-2x text-info me-3"></i>
+                        <h5 class="card-title text-muted mb-0">Total Questions</h5>
+                    </div>
+                    <p class="card-text display-4 fw-bold text-dark">{{ total_questions }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card rounded-4 text-center shadow border-0" style="border-left: 4px solid #ffc107;">
+                <div class="card-body py-4">
+                    <div class="d-flex align-items-center justify-content-center mb-3">
+                        <i class="fas fa-file-alt fa-2x text-warning me-3"></i>
+                        <h5 class="card-title text-muted mb-0">Active Exams</h5>
+                    </div>
+                    <p class="card-text display-4 fw-bold text-dark">{{ active_exams }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4 g-4">
+        <div class="col-lg-8">
+            <div class="card shadow border-0 rounded-3 overflow-hidden">
+                <div class="card-body p-4">
+                    <h5 class="card-title text-dark fw-semibold mb-4">
+                        <i class="fas fa-chart-line me-2"></i>Performance Over Time
+                    </h5>
+                    <canvas id="lineChart" height="150"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow border-0 rounded-3 overflow-hidden">
+                <div class="card-body p-4">
+                    <h5 class="card-title text-dark fw-semibold mb-4">
+                        <i class="fas fa-chart-pie me-2"></i>Category Distribution
+                    </h5>
+                    <canvas id="pieChart" height="150"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card shadow border-0 rounded-3 overflow-hidden">
+                <div class="card-body p-4">
+                    <h5 class="card-title text-dark fw-semibold mb-4">
+                        <i class="fas fa-history me-2"></i>Recent Activity
+                    </h5>
+                    <div class="table-responsive rounded-3">
+                        <table class="table table-hover align-middle rounded-3">
+                            <thead class="bg-primary text-white">
+                                <tr>
+                                    <th class="bg-primary-subtle text-primary">SNo</th>
+                                    <th class="bg-primary-subtle text-primary">Activity</th>
+                                    <th class="bg-primary-subtle text-primary">Candidate</th>
+                                    <th class="bg-primary-subtle text-primary">Category</th>
+                                    <th class="bg-primary-subtle text-primary">Status</th>
+                                    <th class="bg-primary-subtle text-primary">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for activity in recent_activities %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>Filled Form</td>
+                                    <td>{{ activity.name }}</td>
+                                    <td>{{ activity.category }}</td>
+                                    <td>{{ activity.profession_type }}</td>
+                                    <td>{{ activity.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">
+                                        <i class="fas fa-info-circle me-2"></i>No recent activities recorded.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts for Charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Line Chart - Performance Over Time
+    const lineCtx = document.getElementById('lineChart').getContext('2d');
+    new Chart(lineCtx, {
+        type: 'line',
+        data: {
+            labels: {{ months|safe }},
+            datasets: [{
+                label: 'Average Score (%)',
+                data: {{ scores|safe }},
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#007bff',
+                pointRadius: 5,
+                pointHoverRadius: 7
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top', labels: { font: { size: 14 } } },
+                title: { display: true, text: 'Monthly Performance Trend', font: { size: 16 } }
+            },
+            scales: {
+                y: { beginAtZero: true, max: 100, title: { display: true, text: 'Score (%)' } },
+                x: { title: { display: true, text: 'Months' } }
+            },
+            animation: { duration: 1500, easing: 'easeOutBounce' }
+        }
+    });
+
+    // Pie Chart - Category Distribution
+    const pieCtx = document.getElementById('pieChart').getContext('2d');
+    new Chart(pieCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ category_names|safe }},
+            datasets: [{
+                label: 'Questions per Category',
+                data: {{ category_counts|safe }},
+                backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8'],
+                borderColor: ['#0056b3', '#218838', '#e0a800', '#c82333', '#138496'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top', labels: { font: { size: 14 } } },
+                title: { display: true, text: 'Question Distribution', font: { size: 16 } }
+            },
+            animation: { duration: 1000, easing: 'easeInOutQuad' }
+        }
+    });
+
+    // Placeholder function for report download
+    function downloadReport() {
+        alert('Report download functionality to be implemented.');
+        // Future implementation: AJAX call to generate and download report
+    }
+</script>
+{% endblock body %}

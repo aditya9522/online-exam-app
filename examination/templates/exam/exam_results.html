@@ -1,0 +1,256 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Exam Results - Professional Assessment Platform">
+    <title>Exam Results | {{ candidate.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(to bottom, #f4f7fa, #e9ecef);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #007bff, #00d4ff);
+            color: white;
+            border-bottom: 2px solid #0056b3;
+        }
+        .result-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            overflow: hidden;
+            background: white;
+        }
+        .score-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #28a745, #34c759);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+        .score-circle:hover {
+            transform: scale(1.05);
+        }
+        .stats-list .list-group-item {
+            border: none;
+            background: #f8f9fa;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            transition: background 0.3s ease;
+        }
+        .stats-list .list-group-item:hover {
+            background: #e9ecef;
+        }
+        .table th {
+            background: #e9ecef;
+            color: #343a40;
+            font-weight: 600;
+        }
+        .table tbody tr {
+            transition: background 0.2s ease;
+        }
+        .table tbody tr:hover {
+            background: #f1f3f5;
+        }
+        .chart-container {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .footer-note {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .badge-custom {
+            background: #fff;
+            color: #007bff;
+            border: 1px solid #007bff;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body class="">
+    <div class="container py-5">
+        {% if error %}
+        <div class="alert alert-warning text-center shadow-sm" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+        </div>
+        {% else %}
+        <div class="card result-card">
+            <div class="card-header d-flex justify-content-between align-items-center py-3">
+                <h4 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Examination Results
+                </h4>
+                <span class="badge badge-custom px-3 py-2">
+                    <i class="fas fa-user me-1"></i>Candidate ID: {{ candidate.id }}
+                </span>
+            </div>
+            <div class="card-body p-4">
+                <!-- Summary Section -->
+                <div class="row mb-5 align-items-center">
+                    <div class="col-md-4 text-center mb-3 mb-md-0">
+                        <div class="score-circle mx-auto">
+                            {{ score|floatformat:1 }}%
+                        </div>
+                        <p class="mt-3 text-muted">Overall Performance</p>
+                    </div>
+                    <div class="col-md-8">
+                        <ul class="list-group stats-list">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-question-circle me-2"></i>Total Questions</span>
+                                <strong>{{ total }}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-check-square me-2"></i>Answered</span>
+                                <strong>{{ answered }}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-check text-success me-2"></i>Correct Answers</span>
+                                <strong class="text-success">{{ correct }}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-times text-danger me-2"></i>Incorrect Answers</span>
+                                <strong class="text-danger">{{ incorrect }}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-minus-circle text-warning me-2"></i>Unanswered</span>
+                                <strong class="text-warning">{{ unanswered }}</strong>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Graph Section -->
+                <div class="chart-container mb-5">
+                    <canvas id="resultsChart" height="120"></canvas>
+                </div>
+
+                <!-- Detailed Results -->
+                <h4 class="mb-4 text-dark fw-bold"><i class="fas fa-list-ul me-2"></i>Answer Breakdown</h4>
+                <div class="table-responsive shadow-sm rounded-3 overflow-hidden">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-gradient-primary text-white">
+                            <tr>
+                                <th scope="col" class="py-2 px-4"><i class="fas fa-question-circle me-2"></i>Question</th>
+                                <th scope="col" class="py-2 px-4"><i class="fas fa-user-check me-2"></i>Your Answer</th>
+                                <th scope="col" class="py-2 px-4"><i class="fas fa-check-double me-2"></i>Correct Answer</th>
+                                <th scope="col" class="py-2 px-4"><i class="fas fa-clipboard-check me-2"></i>Result</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in history %}
+                            <tr class="{% if entry.correct %}table-success{% else %}table-danger{% endif %} align-middle">
+                                <td class="py-2 px-4">{{ forloop.counter }}. {{ entry.question.question }}</td>
+                                <td class="py-2 px-4">
+                                    <span class="badge {% if entry.correct %}bg-success{% else %}bg-danger{% endif %} text-white px-2 py-1">
+                                        {{ entry.marked_answer|capfirst }}
+                                    </span>
+                                </td>
+                                <td class="py-2 px-4">
+                                    <span class="badge bg-primary text-white px-2 py-1">
+                                        {{ entry.question.answer|capfirst }}
+                                    </span>
+                                </td>
+                                <td class="py-2 px-4">
+                                    {% if entry.correct %}
+                                    <span class="text-success fw-semibold"><i class="fas fa-check-circle me-2"></i>Correct</span>
+                                    {% else %}
+                                    <span class="text-danger fw-semibold"><i class="fas fa-times-circle me-2"></i>Incorrect</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    <i class="fas fa-info-circle fa-2x mb-2 d-block"></i>
+                                    No answers recorded for this exam.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer footer-note text-center py-3">
+                <i class="fas fa-graduation-cap me-2"></i>
+                Great effort! Review your results and prepare for your next challenge.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if history %}
+            const ctx = document.getElementById('resultsChart').getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Correct', 'Incorrect', 'Unanswered'],
+                    datasets: [{
+                        label: 'Questions',
+                        data: [{{ correct }}, {{ incorrect }}, {{ unanswered }}],
+                        backgroundColor: ['#28b745', 'D91656', 'FFB200'],
+                        borderColor: ['#218838', '#c82333', '#e0a800'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Questions',
+                                font: { size: 14 }
+                            },
+                            ticks: { stepSize: 1 }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Performance Categories',
+                                font: { size: 14 }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: 'Performance Distribution',
+                            font: { size: 18, weight: 'bold' },
+                            padding: { bottom: 20 }
+                        },
+                        tooltip: {
+                            backgroundColor: '#343a40',
+                            titleFont: { size: 14 },
+                            bodyFont: { size: 12 }
+                        }
+                    },
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeOutBounce'
+                    }
+                }
+            });
+            {% endif %}
+        });
+    </script>
+</body>
+</html>

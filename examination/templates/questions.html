@@ -1,0 +1,351 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}
+Questions - Examination System
+{% endblock title %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="text-dark fw-bold"><i class="fas fa-question-circle me-2"></i>Questions</h3>
+        <button class="btn btn-outline-success shadow-sm" data-bs-toggle="modal" data-bs-target="#addQuestionModal">
+            <i class="fas fa-plus me-2"></i>New Question
+        </button>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <label class="form-label fw-semibold text-muted">Filter by Question's Category & Set:</label>
+            <div class="d-flex gap-3">
+                <select id="categoryFilter" class="form-select shadow-sm" onchange="filterCategories()">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+                <select id="questionFilter" class="form-select shadow-sm" onchange="filterQuestions()">
+                    <option value="">All Sets</option>
+                    {% for set in sets %}
+                    <option class="set-options" data-category="{{ set.category.id }}" value="{{ set.id }}">{{ set.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    {% if questions %}
+    <div class="row g-4">
+        {% for question in questions %}
+        <div class="col-md-6 questions" data-set="{{ question.set.id }}">
+            <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #007bff;">
+                <div class="card-body">
+                    <h6 class="text-muted mb-3"><span class="fw-semibold text-dark">Q{{ forloop.counter }}:</span> {{ question.question }}</h6>
+                    <div class="d-flex flex-column gap-2 mb-3">
+                        <div class="form-check">
+                            <input type="radio" class="form-check-input" name="option{{ question.id }}" id="option1_{{ question.id }}" disabled>
+                            <label class="form-check-label" for="option1_{{ question.id }}">{{ question.option1 }}</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="radio" class="form-check-input" name="option{{ question.id }}" id="option2_{{ question.id }}" disabled>
+                            <label class="form-check-label" for="option2_{{ question.id }}">{{ question.option2 }}</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="radio" class="form-check-input" name="option{{ question.id }}" id="option3_{{ question.id }}" disabled>
+                            <label class="form-check-label" for="option3_{{ question.id }}">{{ question.option3 }}</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="radio" class="form-check-input" name="option{{ question.id }}" id="option4_{{ question.id }}" disabled>
+                            <label class="form-check-label" for="option4_{{ question.id }}">{{ question.option4 }}</label>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-medium text-muted">Correct:</span>
+                        <span class="badge bg-success-subtle text-success px-3 py-2">{{ question.answer|title }}</span>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between gap-2">
+                    <div class="">
+                        <span class="fw-medium text-muted">Level:</span>
+                        <span class="badge rounded-pill bg-primary-subtle text-primary px-3 py-2">{{ question.set.level|title }}</span>
+                    </div>
+                    <div class="">
+                        <button class="btn btn-outline-info btn-sm edit-btn me-2" 
+                            data-id="{{ question.id }}" 
+                            data-question="{{ question.question }}" 
+                            data-option1="{{ question.option1 }}"
+                            data-option2="{{ question.option2 }}"
+                            data-option3="{{ question.option3 }}"
+                            data-option4="{{ question.option4 }}"
+                            data-answer="{{ question.answer }}"
+                            data-set="{{ question.set.id }}"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#editQuestionModal">
+                            <i class="fas fa-edit me-1"></i>Edit
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm delete-btn" 
+                            data-id="{{ question.id }}" 
+                            data-question="{{ question.question }}"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#deleteQuestionModal">
+                            <i class="fas fa-trash me-1"></i>Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Question Modal -->
+        <div class="modal fade" id="editQuestionModal" tabindex="-1" aria-labelledby="editQuestionLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-xl">
+                <div class="modal-content shadow-lg border-0">
+                    <div class="modal-header bg-primary text-white border-0">
+                        <h5 class="modal-title" id="editQuestionLabel"><i class="fas fa-edit me-2"></i>Edit Question</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <form method="POST" action="{% url 'edit-question' %}" id="editQuestionForm">
+                            {% csrf_token %}
+                            <input type="hidden" name="id" id="edit-question-id">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Question</label>
+                                <textarea class="form-control" id="edit-question" name="question" required></textarea>
+                            </div>
+                            <div class="mb-3 d-flex justify-content-between gap-4">
+                                <div class="w-100">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Option 1</label>
+                                        <input type="text" class="form-control" id="edit-option1" name="option1" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Option 2</label>
+                                        <input type="text" class="form-control" id="edit-option2" name="option2" required>
+                                    </div>
+                                </div>
+                                <div class="w-100">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Option 3</label>
+                                        <input type="text" class="form-control" id="edit-option3" name="option3" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Option 4</label>
+                                        <input type="text" class="form-control" id="edit-option4" name="option4" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Answer</label>
+                                <select name="answer" id="edit-answer" class="form-select">
+                                    <option value="option1">Option 1</option>
+                                    <option value="option2">Option 2</option>
+                                    <option value="option3">Option 3</option>
+                                    <option value="option4">Option 4</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Update</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Question Modal -->
+        <div class="modal fade" id="deleteQuestionModal" tabindex="-1" aria-labelledby="deleteQuestionLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content shadow-lg border-0">
+                    <div class="modal-header bg-danger text-white border-0">
+                        <h5 class="modal-title" id="deleteQuestionLabel"><i class="fas fa-trash me-2"></i>Delete Question</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <p>Are you sure you want to delete "<strong id="delete-question-text"></strong>"? This action cannot be undone.</p>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <form method="POST" action="{% url 'delete-question' %}" id="deleteQuestionForm">
+                            {% csrf_token %}
+                            <input type="hidden" name="id" id="delete-question-id">
+                            <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-warning text-center shadow-sm py-5" role="alert">
+        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+        <p class="mb-0">No questions available. Click 
+            <a href="#" class="alert-link text-primary" data-bs-toggle="modal" data-bs-target="#addQuestionModal">here</a> 
+            to add one.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add Question Modal -->
+<div class="modal fade" id="addQuestionModal" tabindex="-1" aria-labelledby="addQuestionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title" id="addQuestionLabel"><i class="fas fa-plus me-2"></i>Add Question</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form method="POST" action="">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between gap-4 mb-3">
+                        <div class="w-50">
+                            <label class="form-label fw-semibold">Category</label>
+                            <select id="categoryAddModalFilter" onchange="filterAddModalCategories()" name="category" class="form-select" required>
+                                <option value="">Select category...</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="w-50">
+                            <label class="form-label fw-semibold">Question Set</label>
+                            <select name="set" class="form-select" required>
+                                <option value="">Select question set...</option>
+                                {% for set in sets %}
+                                <option class="set-options-add-modal" data-category="{{ set.category.id }}" value="{{ set.id }}">{{ set.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Question</label>
+                        <textarea class="form-control" id="question" name="question" placeholder="Enter question here..." required></textarea>
+                    </div>
+                    <div class="mb-3 d-flex justify-content-between gap-4">
+                        <div class="w-50">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Option 1</label>
+                                <input type="text" class="form-control" id="option1" name="option1" placeholder="Enter option 1..." required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Option 2</label>
+                                <input type="text" class="form-control" id="option2" name="option2" placeholder="Enter option 2..." required>
+                            </div>
+                        </div>
+                        <div class="w-50">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Option 3</label>
+                                <input type="text" class="form-control" id="option3" name="option3" placeholder="Enter option 3..." required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Option 4</label>
+                                <input type="text" class="form-control" id="option4" name="option4" placeholder="Enter option 4..." required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Answer</label>
+                        <select name="answer" class="form-select">
+                            <option value="option1">Option 1</option>
+                            <option value="option2">Option 2</option>
+                            <option value="option3">Option 3</option>
+                            <option value="option4">Option 4</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Add Question</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background: linear-gradient(to bottom, #f4f7fa, #e9ecef);
+    }
+    .card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+    .badge {
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    .form-select, .form-control {
+        border-radius: 8px;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .modal-header.bg-primary {
+        background: linear-gradient(135deg, #007bff, #00d4ff);
+    }
+    .modal-header.bg-danger {
+        background: linear-gradient(135deg, #dc3545, #ff6b6b);
+    }
+    .btn-outline-info, .btn-outline-danger {
+        transition: all 0.3s ease;
+    }
+    .btn-outline-info:hover {
+        background: #17a2b8;
+        color: white;
+    }
+    .btn-outline-danger:hover {
+        background: #dc3545;
+        color: white;
+    }
+    .alert {
+        border-radius: 10px;
+    }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Edit Modal Data Population
+        document.querySelectorAll(".edit-btn").forEach(button => {
+            button.addEventListener("click", function () {
+                document.getElementById("edit-question-id").value = this.dataset.id;
+                document.getElementById("edit-question").value = this.dataset.question;
+                document.getElementById("edit-option1").value = this.dataset.option1;
+                document.getElementById("edit-option2").value = this.dataset.option2;
+                document.getElementById("edit-option3").value = this.dataset.option3;
+                document.getElementById("edit-option4").value = this.dataset.option4;
+                document.getElementById("edit-answer").value = this.dataset.answer;
+            });
+        });
+
+        // Delete Modal Data Population
+        document.querySelectorAll(".delete-btn").forEach(button => {
+            button.addEventListener("click", function () {
+                document.getElementById("delete-question-id").value = this.dataset.id;
+                document.getElementById("delete-question-text").textContent = this.dataset.question;
+            });
+        });
+    });
+
+    // Filter Categories
+    function filterCategories() {
+        const selectedCat = document.getElementById('categoryFilter').value;
+        const allSetOptEle = document.querySelectorAll('.set-options');
+        allSetOptEle.forEach(option => {
+            option.style.display = (selectedCat === "" || option.dataset.category === selectedCat) ? "" : "none";
+        });
+    }
+
+    // Filter Questions
+    function filterQuestions() {
+        const selectedSet = document.getElementById('questionFilter').value;
+        const allQueEle = document.querySelectorAll('.questions');
+        allQueEle.forEach(ele => {
+            ele.style.display = (selectedSet === "" || ele.dataset.set === selectedSet) ? "" : "none";
+        });
+    }
+
+    // Filter Add Modal Categories
+    function filterAddModalCategories() {
+        const selectedCat = document.getElementById('categoryAddModalFilter').value;
+        const allSetOptEle = document.querySelectorAll('.set-options-add-modal');
+        allSetOptEle.forEach(option => {
+            option.style.display = (selectedCat === "" || option.dataset.category === selectedCat) ? "" : "none";
+        });
+    }
+</script>
+{% endblock body %}
